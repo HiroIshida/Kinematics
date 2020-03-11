@@ -82,28 +82,39 @@ function get_parent_frame(r::Robot, frame::Frame)
   frame_parent = r.frames[joint_parent.parent]
 end
 
-function get_tf(r::Robot, frame1, frame2)
-  # frame2 must be decendent
-  function recursion(vec, frame)
-    frame == frame1 && (return vec)
+function get_tf(r::Robot, frame_desc_name, frame_asc_name)
+  key_try = (frame_desc_name, frame_asc_name)
+  try
+    tf = r.tfs[key_try]
+    return tf
+  catch error
+    if isa(error, KeyError) # key not found
+      frame_asc = r.frames[frame_asc_name]
+      frame_desc = r.frames[frame_desc_name]
 
-    frame_parent = get_parent_frame(r, frame)
-    name_this = frame.name
-    name_parent = frame_parent.name
+      function recursion(vec, frame)
+        frame == frame_asc && (return vec)
 
-    key = (name_this, name_parent)
-    tf_single = r.tfs[key] #lambda
-    recursion(tf_single(vec), frame_parent)
+        frame_parent = get_parent_frame(r, frame)
+        name_this = frame.name
+        name_parent = frame_parent.name
+
+        key = (name_this, name_parent)
+        tf_single = r.tfs[key] #lambda
+        recursion(tf_single(vec), frame_parent)
+      end
+      tf(vec) = recursion(vec, frame_desc)
+      r.tfs[(frame_desc_name, frame_asc_name)] = tf
+      return tf
+    end
   end
-
-  tf(vec) = recursion(vec, frame2)
 end
 
 set_configuration(r, [0, 0])
 a = r.tfs[("body1", "world")]([0, 1])
 b = r.tfs[("body2", "body1")]([1, 0])
 
-tf = get_tf(r, frame_list[1], frame_list[3])
+tf = get_tf(r, "body1", "world")
 tf([1, 0])
 
 
