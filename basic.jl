@@ -44,40 +44,30 @@ mutable struct Robot
   end
 end
 
-
-
-fr_world = Frame("world")
-fr_body1 = Frame("body1")
-fr_body2 = Frame("body2")
-
-joint1 = Revolute("world", "body1", [0, 0, 0], "joint1")
-joint2 = Revolute("body1", "body2", [1, 0, 0], "joint2")
-
-frame_list = [fr_world, fr_body1, fr_body2]
-joint_list = [joint1, joint2]
-
-r = Robot([fr_world, fr_body1, fr_body2],
-          [joint1, joint2]) 
-
 function Rot2d(theta)
-  m = [cos(theta) sin(theta);
-       -sin(theta) cos(theta)]
+  m = [cos(theta) -sin(theta);
+       sin(theta) cos(theta)]
 end
 
 function set_configuration(r::Robot, q)
+  @assert length(q) == length(collect(r.joints))
   # precompute minimal transformation 
+  r.tfs = []
   tfs = Dict()
-  for jt in values(r.joints), angle in q
+  for pair in zip(values(r.joints), q)
+    jt, angle = pair 
     key = (jt.child, jt.parent)
+    print(key)
+    println(angle)
     tf(vec) = Rot2d(angle)*vec[1:2] + jt.origin[1:2]
     tfs[key] = tf
   end
   r.tfs = tfs
+  r.q = q
 end
 
 function get_parent_frame(r::Robot, frame::Frame)
   joint_parent = r.joints[frame.parent.name]
-  println(joint_parent.parent)
   frame_parent = r.frames[joint_parent.parent]
 end
 
@@ -112,29 +102,35 @@ end
 function visualize(r::Robot)
   points = []
   for fr in values(r.frames)
+    print(fr.name)
     tf = get_tf(r, fr.name, "world")
     point = tf([0, 0])
     push!(points, point)
   end
   #return points
   arr = hcat(points...)
-  plot(arr[1, :], arr[2, :], seriestype = :scatter)
+  display(plot(arr[1, :], arr[2, :], seriestype = :scatter))
+  return arr
 end
 
-set_configuration(r, [0, 0])
-a = r.tfs[("body1", "world")]([0, 1])
-b = r.tfs[("body2", "body1")]([1, 0])
+fr_world = Frame("world")
+fr_body1 = Frame("body1")
+fr_body2 = Frame("body2")
+fr_body3 = Frame("body3")
+fr_body4 = Frame("body4")
 
-tf = get_tf(r, "body1", "world")
-using Plots
-Plots.plotly()
+joint1 = Revolute("world", "body1", [0, 0, 0], "joint1")
+joint2 = Revolute("body1", "body2", [1, 0, 0], "joint2")
+joint3 = Revolute("body2", "body3", [1, 0, 0], "joint3")
+joint4 = Revolute("body3", "body4", [1, 0, 0], "joint4")
 
+frame_list = [fr_world, fr_body1, fr_body2, fr_body3, fr_body4]
+joint_list = [joint1, joint2, joint3, joint4]
 
+r = Robot(frame_list, joint_list)
 
-set_configuration(r, [0.5, 0.3])
+tf = get_tf(r, "body2", "body1") 
+tf([1, 0])
+
+set_configuration(r, [0.2, -0.2, 0.2, 0.3])
 visualize(r)
-
-
-  
-  
-  
