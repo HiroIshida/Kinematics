@@ -67,8 +67,7 @@ end
 function set_configuration(r::Robot, q)
   # precompute minimal transformation 
   tfs = Dict()
-  joints = collect(values(r.joints))
-  for jt in joints, angle in q
+  for jt in values(r.joints), angle in q
     key = (jt.child, jt.parent)
     tf(vec) = Rot2d(angle)*vec[1:2] + jt.origin[1:2]
     tfs[key] = tf
@@ -110,12 +109,30 @@ function get_tf(r::Robot, frame_desc_name, frame_asc_name)
   end
 end
 
+function visualize(r::Robot)
+  points = []
+  for fr in values(r.frames)
+    tf = get_tf(r, fr.name, "world")
+    point = tf([0, 0])
+    push!(points, point)
+  end
+  #return points
+  arr = hcat(points...)
+  plot(arr[1, :], arr[2, :], seriestype = :scatter)
+end
+
 set_configuration(r, [0, 0])
 a = r.tfs[("body1", "world")]([0, 1])
 b = r.tfs[("body2", "body1")]([1, 0])
 
 tf = get_tf(r, "body1", "world")
-tf([1, 0])
+using Plots
+Plots.plotly()
+
+
+
+set_configuration(r, [0.5, 0.3])
+visualize(r)
 
 
   
