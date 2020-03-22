@@ -24,8 +24,12 @@ struct Transform
   rot
 end
 
-function excert(tf::Transform, vec)
-  return tf.trans + Rot2d(tf.rot)*vec
+function excert(tf::Transform, vec; rotonly=false)
+  if rotonly
+    return Rot2d(tf.rot)*vec
+  else
+    return tf.trans + Rot2d(tf.rot)*vec
+  end
 end
 
 
@@ -128,13 +132,12 @@ end
 function jacobian(r::Robot, link)
   vec_d_list = []
   for joint in values(r.joints)
-    coord_here = r.links[joint.parent]
+    coord_here = r.links[joint.child]
     tf = get_tf(r, link, coord_here)
     vec_r = excert(tf, [0, 0])
     vec_vertical = [-vec_r[2], vec_r[1]]
-    println(vec_vertical)
     tf_to_world = get_tf(r, coord_here, r.links["world"])
-    vec_d = excert(tf_to_world, vec_vertical)
+    vec_d = excert(tf_to_world, vec_vertical; rotonly=true)
     push!(vec_d_list, vec_d)
   end
   jac = hcat(vec_d_list...)
@@ -176,5 +179,5 @@ joint_list = [joint1, joint2, joint3, joint4]
 r = Robot(link_list, joint_list)
 get_tf(r, link_body4, link_body1)
 
-@time set_configuration(r, [0.2, -0.2, 0.2, 0.3])
-j = jacobian(r, link_body3)
+@time set_configuration(r, [0.0, 0.0, 0.0, 0.0])
+j = jacobian(r, link_body4)
