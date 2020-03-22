@@ -12,8 +12,10 @@ mutable struct Link
   parent
   child
   name
-  function Link(name)
-    new(Nothing, Nothing, name)
+  length
+  color
+  function Link(name; length=1.0, color=:red)
+    new(Nothing, Nothing, name, length, color)
   end
 end
 
@@ -102,13 +104,14 @@ end
 function visualize(r::Robot)
   points = []
   points_tip = []
+  plot()
   for link in values(r.links)
     tf = get_tf(r, link.name, "world")
     point = tf([0, 0])
-    point_tip = tf([1, 0])
+    point_tip = tf([link.length, 0])  
     push!(points, point)
     if link.name != "world"
-      plot!([point[1], point_tip[1]], [point[2], point_tip[2]], legend=false)
+      plot!([point[1], point_tip[1]], [point[2], point_tip[2]], legend=false, color=link.color)
     end
   end
   #return points
@@ -120,7 +123,7 @@ link_world = Link("world")
 link_body1 = Link("body1")
 link_body2 = Link("body2")
 link_body3 = Link("body3")
-link_body4 = Link("body4")
+link_body4 = Link("body4"; length=0.5, color=:blue)
 
 joint1 = Revolute("world", "body1", [0, 0, 0], "joint1")
 joint2 = Revolute("body1", "body2", [1, 0, 0], "joint2")
