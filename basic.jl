@@ -101,16 +101,20 @@ end
 
 function visualize(r::Robot)
   points = []
+  points_tip = []
   for fr in values(r.frames)
     print(fr.name)
     tf = get_tf(r, fr.name, "world")
     point = tf([0, 0])
+    point_tip = tf([1, 0])
     push!(points, point)
+    if fr.name != "world"
+      plot!([point[1], point_tip[1]], [point[2], point_tip[2]], legend=false)
+    end
   end
   #return points
   arr = hcat(points...)
-  display(plot(arr[1, :], arr[2, :], seriestype = :scatter))
-  return arr
+  plot!(arr[1, :], arr[2, :], seriestype = :scatter, legend=false)
 end
 
 fr_world = Frame("world")
@@ -129,8 +133,9 @@ joint_list = [joint1, joint2, joint3, joint4]
 
 r = Robot(frame_list, joint_list)
 
-tf = get_tf(r, "body2", "body1") 
-tf([1, 0])
+tf = get_tf(r, "body1", "world") 
+#tf([1, 0])
 
-set_configuration(r, [0.2, -0.2, 0.2, 0.3])
+@time set_configuration(r, [0.2, -0.2, 0.2, 0.3])
+using Plots
 visualize(r)
