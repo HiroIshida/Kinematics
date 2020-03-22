@@ -48,7 +48,6 @@ mutable struct Robot
       links[fr.name] = fr
     end
 
-    println(links)
     for jt in joint_list
       joints[jt.name] = jt
       links[jt.parent].child = jt
@@ -74,8 +73,6 @@ function set_configuration(r::Robot, q)
   for pair in zip(values(r.joints), q)
     jt, angle = pair 
     key = (jt.child, jt.parent)
-    print(key)
-    println(angle)
     tf = Transform(jt.origin[1:2], angle)
     #tf(vec) = Rot2d(angle)*vec[1:2] + jt.origin[1:2]
     tfs[key] = tf
@@ -113,7 +110,6 @@ function get_tf(r::Robot, link_child, link_parent)
   # razy evaluation of get_tf
   # computation is done recursively
   key_try = (link_child.name, link_parent.name)
-  print(key_try)
   try
     tf = r.tfs[key_try]
     return tf
@@ -173,7 +169,7 @@ link_world = Link("world")
 link_body1 = Link("body1")
 link_body2 = Link("body2")
 link_body3 = Link("body3")
-link_body4 = Link("body4"; length=0.5, color=:blue)
+link_body4 = Link("body4"; length=0.1, color=:blue)
 
 joint1 = Revolute("world", "body1", [0, 0, 0], "joint1")
 joint2 = Revolute("body1", "body2", [1, 0, 0], "joint2")
@@ -187,7 +183,22 @@ r = Robot(link_list, joint_list)
 get_tf(r, link_body4, link_body1)
 
 @time set_configuration(r, [0.0, 0.0, 0.0, 0.0])
-j = jacobian(r, link_body4)
-#j * j'  + Diagonal([1, 1])
-j_inv = sr_inverse(j)
-#visualize(r)
+#j = jacobian(r, link_body4)
+
+x_target = [1., 1.]
+for i in 1:100
+  tf = get_tf(r, link_body4, r.links["world"])
+  x_now = tf.trans
+  #println(x_now)
+  dx = x_target - x_now
+  j = jacobian(r, link_body4)
+  j_inv = sr_inverse(j)
+  if i==1
+    print(j_inv)
+  end
+  set_configuration(r, r.q + j_inv * dx)
+end
+visualize(r)
+
+
+
