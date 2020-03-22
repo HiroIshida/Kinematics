@@ -19,6 +19,15 @@ mutable struct Link
   end
 end
 
+struct Transform
+  trans
+  rot
+end
+
+function excert(tf::Transform, vec)
+  return tf.trans + Rot2d(tf.rot)*vec
+end
+
 
 mutable struct Robot
   links 
@@ -61,44 +70,75 @@ function set_configuration(r::Robot, q)
     key = (jt.child, jt.parent)
     print(key)
     println(angle)
-    tf(vec) = Rot2d(angle)*vec[1:2] + jt.origin[1:2]
+    tf = Transform(jt.origin[1:2], angle)
+    #tf(vec) = Rot2d(angle)*vec[1:2] + jt.origin[1:2]
     tfs[key] = tf
   end
+
+  for link in values(r.links)
+    tfs[(link.name, link.name)] = Transform([0., 0.], 0.0)
+  end
+
   r.tfs = tfs
   r.q = q
 end
 
 function get_parent_link(r::Robot, link::Link)
+  link.parent == Nothing && (return Nothing)
   joint_parent = r.joints[link.parent.name]
   link_parent = r.links[joint_parent.parent]
 end
 
-function get_tf(r::Robot, link_desc_name, link_asc_name)
-  key_try = (link_desc_name, link_asc_name)
+function get_child_link(r::Robot, link::Link)
+  # currently each link has a single child
+  link.child == Nothing && (return Nothing)
+  joint_child = r.joints[link.child.name]
+  link_child = r.links[joint_child.child]
+end
+
+function composite_tf(tf_a2b::Transform, tf_b2c::Transform)
+  trans_new = tf_b2c.trans + Rot2d(tf_b2c.rot)*tf_a2b.trans
+  rot_new = tf_b2c.rot + tf_a2b.rot
+  tf_a2c = Transform(trans_new, rot_new)
+  return tf_a2c
+end
+
+function get_tf(r::Robot, link_child, link_parent)
+  # razy evaluation of get_tf
+  # computation is done recursively
+  key_try = (link_child.name, link_parent.name)
+  print(key_try)
   try
     tf = r.tfs[key_try]
     return tf
-  catch error
+
+  catch error 
     if isa(error, KeyError) # key not found
-      link_asc = r.links[link_asc_name]
-      link_desc = r.links[link_desc_name]
+      link_middle = get_parent_link(r, link_child)
+      tf_c2m = get_tf(r, link_child, link_middle) # must exist
+      tf_m2p = get_tf(r, link_middle, link_parent) # into a recursion
+      tf_c2p = composite_tf(tf_c2m, tf_m2p)
 
-      function recursion(vec, link)
-        link == link_asc && (return vec)
-
-        link_parent = get_parent_link(r, link)
-        name_this = link.name
-        name_parent = link_parent.name
-
-        key = (name_this, name_parent)
-        tf_single = r.tfs[key] #lambda
-        recursion(tf_single(vec), link_parent)
-      end
-      tf(vec) = recursion(vec, link_desc)
-      r.tfs[(link_desc_name, link_asc_name)] = tf
-      return tf
+      r.tfs[key_try] = tf_c2p
+      return tf_c2p
     end
   end
+end
+
+function jacobian(r::Robot, link)
+  vec_d_list = []
+  for joint in values(r.joints)
+    coord_here = r.links[joint.parent]
+    tf = get_tf(r, link, coord_here)
+    vec_r = excert(tf, [0, 0])
+    vec_vertical = [-vec_r[2], vec_r[1]]
+    println(vec_vertical)
+    tf_to_world = get_tf(r, coord_here, r.links["world"])
+    vec_d = excert(tf_to_world, vec_vertical)
+    push!(vec_d_list, vec_d)
+  end
+  jac = hcat(vec_d_list...)
+  return jac
 end
 
 function visualize(r::Robot)
@@ -134,10 +174,7 @@ link_list = [link_world, link_body1, link_body2, link_body3, link_body4]
 joint_list = [joint1, joint2, joint3, joint4]
 
 r = Robot(link_list, joint_list)
-
-tf = get_tf(r, "body1", "world") 
-#tf([1, 0])
+get_tf(r, link_body4, link_body1)
 
 @time set_configuration(r, [0.2, -0.2, 0.2, 0.3])
-using Plots
-visualize(r)
+j = jacobian(r, link_body3)
