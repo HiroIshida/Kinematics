@@ -148,10 +148,11 @@ function visualize(r::Robot)
   points = []
   points_tip = []
   plot()
+  link_root = r.links["world"]
   for link in values(r.links)
-    tf = get_tf(r, link.name, "world")
-    point = tf([0, 0])
-    point_tip = tf([link.length, 0])  
+    tf = get_tf(r, link, link_root)
+    point = excert(tf, [0, 0])
+    point_tip = excert(tf, [link.length, 0])  
     push!(points, point)
     if link.name != "world"
       plot!([point[1], point_tip[1]], [point[2], point_tip[2]], legend=false, color=link.color)
@@ -180,4 +181,6 @@ r = Robot(link_list, joint_list)
 get_tf(r, link_body4, link_body1)
 
 @time set_configuration(r, [0.0, 0.0, 0.0, 0.0])
-j = jacobian(r, link_body4)
+#j = jacobian(r, link_body4)
+using Plots
+visualize(r)
