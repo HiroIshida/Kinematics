@@ -1,3 +1,5 @@
+using LinearAlgebra
+
 mutable struct Revolute
   parent 
   child
@@ -163,6 +165,10 @@ function visualize(r::Robot)
   plot!(arr[1, :], arr[2, :], seriestype = :scatter, legend=false)
 end
 
+function sr_inverse(J)
+  j_inv = j'*inv(j * j' + Diagonal([1., 1.]))
+end
+
 link_world = Link("world")
 link_body1 = Link("body1")
 link_body2 = Link("body2")
@@ -181,6 +187,7 @@ r = Robot(link_list, joint_list)
 get_tf(r, link_body4, link_body1)
 
 @time set_configuration(r, [0.0, 0.0, 0.0, 0.0])
-#j = jacobian(r, link_body4)
-using Plots
-visualize(r)
+j = jacobian(r, link_body4)
+#j * j'  + Diagonal([1, 1])
+j_inv = sr_inverse(j)
+#visualize(r)
