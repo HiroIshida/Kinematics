@@ -161,8 +161,23 @@ function visualize(r::Robot)
   plot!(arr[1, :], arr[2, :], seriestype = :scatter, legend=false)
 end
 
-function sr_inverse(J)
+function sr_inverse(j)
   j_inv = j'*inv(j * j' + Diagonal([1., 1.]))
+end
+
+function solve_ik!(r::Robot, x_target; itr=100)
+  for i in 1:itr
+    tf = get_tf(r, link_body4, r.links["world"])
+    x_now = tf.trans
+    #println(x_now)
+    dx = x_target - x_now
+    j = jacobian(r, link_body4)
+    j_inv = sr_inverse(j)
+    if i==1
+      print(j_inv)
+    end
+    set_configuration(r, r.q + j_inv * dx)
+  end
 end
 
 link_world = Link("world")
@@ -182,23 +197,8 @@ joint_list = [joint1, joint2, joint3, joint4]
 r = Robot(link_list, joint_list)
 get_tf(r, link_body4, link_body1)
 
-@time set_configuration(r, [0.0, 0.0, 0.0, 0.0])
+set_configuration(r, [0.0, 0.0, 0.0, 0.0])
 #j = jacobian(r, link_body4)
 
 x_target = [1., 1.]
-for i in 1:100
-  tf = get_tf(r, link_body4, r.links["world"])
-  x_now = tf.trans
-  #println(x_now)
-  dx = x_target - x_now
-  j = jacobian(r, link_body4)
-  j_inv = sr_inverse(j)
-  if i==1
-    print(j_inv)
-  end
-  set_configuration(r, r.q + j_inv * dx)
-end
-visualize(r)
-
-
-
+@time solve_ik!(r, x_target)
