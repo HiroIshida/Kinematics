@@ -40,6 +40,7 @@ mutable struct Robot
   joints
   tfs 
   q 
+  qd
   function Robot(link_list, joint_list)
     joints = Dict()
 
@@ -65,7 +66,7 @@ function Rot2d(theta)
        sin(theta) cos(theta)]
 end
 
-function set_configuration(r::Robot, q)
+function set_configuration(r::Robot, q, qd = nothing)
   @assert length(q) == length(collect(r.joints))
   # precompute minimal transformation 
   r.tfs = []
@@ -84,6 +85,7 @@ function set_configuration(r::Robot, q)
 
   r.tfs = tfs
   r.q = q
+  r.qd = qd
 end
 
 function get_parent_link(r::Robot, link::Link)
@@ -162,7 +164,8 @@ function visualize(r::Robot)
 end
 
 function sr_inverse(j)
-  j_inv = j'*inv(j * j' + Diagonal([1., 1.]))
+  n = size(j)[1]
+  j_inv = j'*inv(j * j' + Diagonal(ones(n)))
 end
 
 function solve_ik!(r::Robot, x_target; itr=100)
@@ -171,12 +174,14 @@ function solve_ik!(r::Robot, x_target; itr=100)
     x_now = tf.trans
     #println(x_now)
     dx = x_target - x_now
-    j = jacobian(r, link_body4)
+    j = jacobian(r, link_body3)[:, 1:end-1]
     j_inv = sr_inverse(j)
     if i==1
       print(j_inv)
     end
-    set_configuration(r, r.q + j_inv * dx)
+    dq = j_inv * dx
+    push!(dq, 0)
+    set_configuration(r, r.q + dq, r.qd)
   end
 end
 
@@ -195,10 +200,57 @@ link_list = [link_world, link_body1, link_body2, link_body3, link_body4]
 joint_list = [joint1, joint2, joint3, joint4]
 
 r = Robot(link_list, joint_list)
-get_tf(r, link_body4, link_body1)
+#get_tf(r, link_body4, link_body1)
 
-set_configuration(r, [0.0, 0.0, 0.0, 0.0])
-#j = jacobian(r, link_body4)
+set_configuration(r, zeros(4), zeros(4))
+#j = jacobian(r, link_body3)
+#x_target = [1., 0.5]
+#@time solve_ik!(r, x_target)
 
-x_target = [1., 1.]
-@time solve_ik!(r, x_target)
+#@time solve_ik!(r, x_target)
+
+function simple_attractor(x, xd) 
+  x_g = [1., 0.5]
+  #x_g = [1.9, 0.9]
+  alpha = 2.0
+  beta = 10.0
+
+  function normalizer(s)  
+    c = 0.01
+    z = norm()
+    h = z + c * log(1+exp(-2*c*z))
+    return s/h
+  end
+
+  print(beta * xd)
+  f = alpha * (x_g - x) - beta * xd
+  return f
+end
+
+x = [0, 0]
+xd = [0, 0]
+dt = 0.1
+
+for i in 1:500
+  j = jacobian(r, link_body4)
+  xd = j*r.qd
+
+  tf = get_tf(r, link_body4, r.links["world"])
+  x = tf.trans
+  xdd = simple_attractor(x, xd)
+  println(xdd)
+
+  j_ = j[:, 1:end-1]
+  qdd = sr_inverse(j_'*j_)*j_'*xdd
+  push!(qdd, 0.0)
+
+  qd = r.qd + qdd * dt
+  q = r.q + r.qd * dt
+  set_configuration(r, q, qd)
+  #visualize(r)
+end
+
+using Plots
+#plot()
+visualize(r)
+
