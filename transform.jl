@@ -1,5 +1,6 @@
 using LinearAlgebra
 using StaticArrays
+import Base.*
 
 
 
@@ -13,12 +14,13 @@ Ry(a) = @SMatrix [cos(a) 0 sin(a); 0 1 0; -sin(a) 0 cos(a)]
 Rz(a) = @SMatrix [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
 
 function quaternion2matrix(q)  
-  q1, q2, q3, q0 = q
+  q0, q1, q2, q3 = q
   mat = @SMatrix[q0^2+q1^2-q2^2-q3^2 2*(q1*q2-q0*q3) 2*(q1*q3+q0*q2);
                  2*(q1*q2+q0*q3) q0^2-q1^2+q2^2-q3^2 2*(q2*q3-q0*q1);
                  2*(q1*q3-q0*q2) 2*(q2*q3+q0*q1) q0^2-q1^2-q2^2+q3^2]
   return mat
 end
+
 
 #=
 function rpy2quaternion(r, p, y)
@@ -31,10 +33,22 @@ end
 mutable struct Quaternion  
   vec::SVector{4, Float64}
   mat::Union{Nothing, SMatrix{3, 3, Float64}}
-  function Quaternion(x, y, z, w)
-    vec = @SVector [x, y, z, w]
-    new(vec, nothing)
-  end
+end
+
+function Quaternion(x, y, z, w)
+  vec = @SVector [x, y, z, w]
+  Quaternion(vec, nothing)
+end
+
+function Base.:*(q::Quaternion, p::Quaternion)
+  q0, q1, q2, q3 = q.vec
+  mat = @SMatrix [q0 -q1 -q2 -q3;
+                  q1 q0 -q3 q2;
+                  q2 q3 q0 -q1;
+                  q3 -q2 q1 q0]
+  vec_new = mat * p.vec
+  println(vec_new)
+  Quaternion(vec_new, nothing)
 end
 
 function Base.getproperty(q::Quaternion, field::Symbol)
@@ -70,8 +84,15 @@ function (tf::Transform)(x)
   return tf.trans + tf.rot(x)
 end
 
+function Base.:∘(tf1::Transform, tf2::Transform)
+  trans_new = tf2.trans + tf2.rot(tf1.trans)
+  rot_new = tf1.rot * tf2.rot
+  Transform(trans_new, rot_new)
+end
+
 
 #tf1 = Transform([0, 0, 0, 0, 0, 0])
-tf2 = Transform([0, 0, 0, 0, 0, 0, 1])
-tf2([1, 1, 1])
+tf1 = Transform([0, 0, 0, 1, 0, 0, 0])
+tf2 = Transform([0, 0, 0, 1, 0, 0, 0])
+tf1∘tf2
 
