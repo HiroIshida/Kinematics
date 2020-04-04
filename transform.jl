@@ -9,15 +9,17 @@ abstract type AbstractRotation end
 
 struct Euler <: AbstractRotation
   rpy
+  mat
+  function Euler(r, p, y)
+    rpy = [r p y]
+    mat = Rz(-r) * Ry(-p) * Rx(-y)
+    new(rpy, mat)
+  end
 end
 
-function (*)(eul::Euler, p)
-  a, b, c = eul.rpy
-  mat = Rz(-a) * Ry(-b) * Rx(-c)
-  return mat*p
+function (rot::Euler)(x)
+  return rot.mat * x
 end
-
-
 
 struct Transform
   trans
@@ -25,7 +27,7 @@ struct Transform
 end
 
 function (tf::Transform)(x)
-  return tf.trans + tf.rot*x
+  return tf.trans + tf.rot(x)
 end
-tf = Transform([0, 0, 0], Euler([0, 0, 0.5]))
+tf = Transform([0, 0, 0], Euler(0, 0, 0.5))
 v = tf([1, 0, 0])
