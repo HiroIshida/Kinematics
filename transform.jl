@@ -15,6 +15,9 @@ function quaternion2matrix(q)
 end
 
 function rpy2quaternion(r, p, y)
+  r *= -1
+  p *= -1
+  y *= -1
   qw = cos(r/2) * cos(p/2) * cos(y/2) + sin(r/2) * sin(p/2) * sin(y/2)
   qx = sin(r/2) * cos(p/2) * cos(y/2) - cos(r/2) * sin(p/2) * sin(y/2)
   qy = cos(r/2) * sin(p/2) * cos(y/2) + sin(r/2) * cos(p/2) * sin(y/2)
@@ -84,10 +87,4 @@ function Base.:∘(tf1::Transform, tf2::Transform)
   rot_new = tf1.rot * tf2.rot
   Transform(trans_new, rot_new)
 end
-
-
-#tf1 = Transform([0, 0, 0, 0, 0, 0])
-tf1 = Transform([0, 0, 0], [1, 0, 0, 0])
-tf2 = Transform([0, 0, 0], [0, 0, 0])
-tf1∘tf2
 
