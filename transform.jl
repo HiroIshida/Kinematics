@@ -22,11 +22,6 @@ function rpy2quaternion(r, p, y)
   return @SVector [qw, qx, qy, qz]
 end
 
-function rpy2quaternion(r, p, y)
-  rpy = @SVector [r, p, y]
-  mat = Rz(-r) * Ry(-p) * Rx(-y)
-end
-
 mutable struct Quaternion  
   vec::SVector{4, Float64}
   mat::SMatrix{3, 3, Float64}
@@ -93,6 +88,6 @@ end
 
 #tf1 = Transform([0, 0, 0, 0, 0, 0])
 tf1 = Transform([0, 0, 0], [1, 0, 0, 0])
-tf2 = Transform([0, 0, 0], [1, 0, 0, 0])
+tf2 = Transform([0, 0, 0], [0, 0, 0])
 tf1∘tf2
 
