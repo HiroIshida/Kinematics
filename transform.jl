@@ -29,17 +29,19 @@ end
 
 mutable struct Quaternion  
   vec::SVector{4, Float64}
-  mat::Union{Nothing, SMatrix{3, 3, Float64}}
+  mat::SMatrix{3, 3, Float64}
 end
 
 function Quaternion(x, y, z, w)
   vec = @SVector [x, y, z, w]
-  Quaternion(vec, nothing)
+  mat = quaternion2matrix(vec)
+  Quaternion(vec, mat)
 end
 
 function Quaternion(r, p, y)
   vec = rpy2quaternion(r, p, y)
-  Quaternion(vec, nothing)
+  mat = quaternion2matrix(vec)
+  Quaternion(vec, mat)
 end
 
 function Base.:*(q::Quaternion, p::Quaternion)
@@ -49,22 +51,8 @@ function Base.:*(q::Quaternion, p::Quaternion)
                   q2 q3 q0 -q1;
                   q3 -q2 q1 q0]
   vec_new = mat * p.vec
-  println(vec_new)
-  Quaternion(vec_new, nothing)
-end
-
-function Base.getproperty(q::Quaternion, field::Symbol)
-  """
-  about overloading getproperty
-  https://discourse.julialang.org/t/whats-the-difference-between-fields-and-properties/12495
-  """
-  if field == :mat   
-    if isnothing(getfield(q, :mat))
-      vec = getfield(q, :vec)
-      q.mat = quaternion2matrix(vec)
-    end
-  end
-  return getfield(q, field)
+  mat = quaternion2matrix(vec_new)
+  Quaternion(vec_new, mat)
 end
 
 function (q::Quaternion)(x) 
