@@ -2,13 +2,6 @@ using LinearAlgebra
 using StaticArrays
 import Base.*
 
-
-
-#=
-about overloading getproperty
-https://discourse.julialang.org/t/whats-the-difference-between-fields-and-properties/12495
-=#
-
 Rx(a) = @SMatrix [1 0 0; 0 cos(a) -sin(a); 0 sin(a) cos(a)]
 Ry(a) = @SMatrix [cos(a) 0 sin(a); 0 1 0; -sin(a) 0 cos(a)]
 Rz(a) = @SMatrix [cos(a) -sin(a) 0; sin(a) cos(a) 0; 0 0 1]
@@ -21,14 +14,18 @@ function quaternion2matrix(q)
   return mat
 end
 
+function rpy2quaternion(r, p, y)
+  qw = cos(r/2) * cos(p/2) * cos(y/2) + sin(r/2) * sin(p/2) * sin(y/2)
+  qx = sin(r/2) * cos(p/2) * cos(y/2) - cos(r/2) * sin(p/2) * sin(y/2)
+  qy = cos(r/2) * sin(p/2) * cos(y/2) + sin(r/2) * cos(p/2) * sin(y/2)
+  qz = cos(r/2) * cos(p/2) * sin(y/2) - sin(r/2) * sin(p/2) * cos(y/2)
+  return @SVector [qw, qx, qy, qz]
+end
 
-#=
 function rpy2quaternion(r, p, y)
   rpy = @SVector [r, p, y]
   mat = Rz(-r) * Ry(-p) * Rx(-y)
-  Euler(rpy, mat)
 end
-=#
 
 mutable struct Quaternion  
   vec::SVector{4, Float64}
@@ -37,6 +34,11 @@ end
 
 function Quaternion(x, y, z, w)
   vec = @SVector [x, y, z, w]
+  Quaternion(vec, nothing)
+end
+
+function Quaternion(r, p, y)
+  vec = rpy2quaternion(r, p, y)
   Quaternion(vec, nothing)
 end
 
@@ -52,6 +54,10 @@ function Base.:*(q::Quaternion, p::Quaternion)
 end
 
 function Base.getproperty(q::Quaternion, field::Symbol)
+  """
+  about overloading getproperty
+  https://discourse.julialang.org/t/whats-the-difference-between-fields-and-properties/12495
+  """
   if field == :mat   
     if isnothing(getfield(q, :mat))
       vec = getfield(q, :vec)
@@ -70,14 +76,20 @@ struct Transform
   rot::Quaternion
 end
 
-function Transform(vec)
-  if length(vec) == 7
-    trans = @SVector[vec[1], vec[2], vec[3]]
-    rot = Quaternion(vec[4], vec[5], vec[6], vec[7])
-    Transform(trans, rot)
+function Transform(trans_, rotlike)
+  trans = SVector{3, Float64}(trans_)
+
+  rot = nothing
+  if length(rotlike) == 3 # rpy case 
+    r, p, y = rotlike
+    rot = Quaternion(r, p, y)
+  elseif length(rotlike) == 4 # quaternion case
+    w, x, y, z = rotlike
+    rot = Quaternion(w, x, y, z)
   else
-    error("vec must be dim=6 or 7")
+    error("rotlike must be dim=3 or 4")
   end
+  Transform(trans, rot)
 end
 
 function (tf::Transform)(x)
@@ -92,7 +104,7 @@ end
 
 
 #tf1 = Transform([0, 0, 0, 0, 0, 0])
-tf1 = Transform([0, 0, 0, 1, 0, 0, 0])
-tf2 = Transform([0, 0, 0, 1, 0, 0, 0])
+tf1 = Transform([0, 0, 0], [1, 0, 0, 0])
+tf2 = Transform([0, 0, 0], [1, 0, 0, 0])
 tf1∘tf2
 
