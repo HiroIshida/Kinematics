@@ -15,9 +15,6 @@ function quaternion2matrix(q)
 end
 
 function rpy2quaternion(r, p, y)
-  r *= -1
-  p *= -1
-  y *= -1
   qw = cos(r/2) * cos(p/2) * cos(y/2) + sin(r/2) * sin(p/2) * sin(y/2)
   qx = sin(r/2) * cos(p/2) * cos(y/2) - cos(r/2) * sin(p/2) * sin(y/2)
   qy = cos(r/2) * sin(p/2) * cos(y/2) + sin(r/2) * cos(p/2) * sin(y/2)
@@ -42,7 +39,7 @@ function Quaternion(r, p, y)
   Quaternion(vec, mat)
 end
 
-function Base.:*(q::Quaternion, p::Quaternion)
+function Base.:*(p::Quaternion, q::Quaternion)
   q0, q1, q2, q3 = q.vec
   mat = @SMatrix [q0 -q1 -q2 -q3;
                   q1 q0 -q3 q2;
@@ -82,9 +79,9 @@ function (tf::Transform)(x)
   return tf.trans + tf.rot(x)
 end
 
-function Base.:∘(tf1::Transform, tf2::Transform)
-  trans_new = tf2.trans + tf2.rot(tf1.trans)
-  rot_new = tf1.rot * tf2.rot
+function Base.:∘(tf12::Transform, tf23::Transform)
+  trans_new = tf23.trans + tf23.rot(tf12.trans)
+  rot_new = tf12.rot * tf23.rot
   Transform(trans_new, rot_new)
 end
 
