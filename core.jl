@@ -1,25 +1,10 @@
 include("./transform.jl")
 
-#abstract struct AbstractJoint end
-
-mutable struct Revolute{T} #<: AbstractJoint
-  """
-  as for mutually recursive struct in Julia see:
-  https://discourse.julialang.org/t/mutually-recursive-type/25536/2?u=hiroishida
-  this may be got better in some future..
-  """ 
-  parent::Union{Nothing, T}
-  child::Union{Nothing, T}
-  origin::Transform
-  name
-  function Revolute(parent, child, origin, name)
-    new{Link}(parent, child, origin, name)
-  end
-end
+abstract type AbstractJoint end
 
 mutable struct Link
-  parent::Union{Nothing, Revolute}
-  child::Union{Nothing, Revolute}
+  parent::Union{Nothing, AbstractJoint}
+  child::Union{Nothing, AbstractJoint}
   name
   length
   color
@@ -27,4 +12,15 @@ mutable struct Link
     new(Nothing, Nothing, name, length, color)
   end
 end
+
+mutable struct Revolute <: AbstractJoint
+  parent::Union{Nothing, Link}
+  child::Union{Nothing, Link}
+  origin::Transform
+  name
+  function Revolute(parent, child, origin, name)
+    new(parent, child, origin, name)
+  end
+end
+
 
