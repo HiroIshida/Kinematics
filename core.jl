@@ -20,20 +20,21 @@ mutable struct Revolute <: AbstractJoint
     name
     parent::Union{Nothing, Link}
     child::Union{Nothing, Link}
-    origin::Transform
+    origin::Transform # T: joint -> parent_link
     axis::SVector{3, Float64}
-    angle::Union{Nothing, Float64}
-    function Revolute(name, parent, child, origin, axis, angle=nothing)
-        new(name, parent, child, origin, axis, angle)
+    function Revolute(name, parent, child, origin, axis)
+        new(name, parent, child, origin, axis)
     end
 end
 
-#=
-function tf_adj_links(jt::Revolute)
-    jt.parnet 
-    jt.child
+function tf_adj_links(jt::Revolute, angle)
+    link_parent = jt.parnet 
+    link_child = jt.child
+    tf_joint2plink = jt.origin
+    tf_clink2joint = Transform([0, 0, 0], jt.axis, angle)
+    tf_clink2plink = tf_clink2joint ∘ tf_joint2plink
+    return tf_clink2plink
 end
-=#
 
 function parse_urdf(urdffile)
     xroot = LightXML.root(parse_file(urdffile))
@@ -66,12 +67,8 @@ function parse_urdf(urdffile)
     for joint_xml in joint_xml_list
         # step2
         joint_name, parent_name, child_name, origin, axis = parse_joint_xml(joint_xml)
-        joint = Revolute(joint_name, 
-                         link_dict[parent_name],
-                         link_dict[child_name],
-                         origin, 
-                         axis,
-                         0.0)
+        joint = Revolute(joint_name, link_dict[parent_name], link_dict[child_name],
+                         origin, axis)
         joint_dict[joint_name] = joint
 
         # step3 
