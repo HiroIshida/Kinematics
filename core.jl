@@ -98,4 +98,16 @@ function parse_joint_xml(joint_xml)
     return joint_name, parent_name, child_name, origin, axis
 end
 
-A, B = parse_urdf("sample.urdf")
+mutable struct Robot
+    link_dict
+    joint_dict 
+    tf_dict
+end
+
+function Robot(urdffile)
+    link_dict, joint_dict = parse_urdf(urdffile)
+    tf_dict = Dict()
+    Robot(link_dict, joint_dict, tf_dict) 
+end
+
+r = Robot("sample.urdf")
