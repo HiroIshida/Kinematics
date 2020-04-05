@@ -22,6 +22,20 @@ function rpy2quaternion(r, p, y)
   return @SVector [qw, qx, qy, qz]
 end
 
+"""
+The definition of quaternion here is
+q = [w, x, y, z]
+where 
+w = cos(a/2)
+x = v_x sin(a/2)
+y = v_y sin(a/2)
+z = v_z sin(a/2)
+and v is axis unit vector
+
+* Note that this definition is different from the one of ROS (w = [x, y, z, w])
+
+"""
+
 mutable struct Quaternion  
   vec::SVector{4, Float64}
   mat::SMatrix{3, 3, Float64}
@@ -37,6 +51,17 @@ function Quaternion(r, p, y)
   vec = rpy2quaternion(r, p, y)
   mat = quaternion2matrix(vec)
   Quaternion(vec, mat)
+end
+
+function Quaternion(axis, angle)
+    half_angle = angle*0.5
+    vec_ = [cos(half_angle), 
+            axis[1]*sin(half_angle), 
+            axis[2]*sin(half_angle), 
+            axis[2]*sin(half_angle)]
+    vec = SVector{4}(vec_)
+    mat = quaternion2matrix(vec)
+    Quaternion(vec, mat)
 end
 
 function Base.:*(p::Quaternion, q::Quaternion)
@@ -75,6 +100,12 @@ function Transform(trans_, rotlike)
   Transform(trans, rot)
 end
 
+function Transform(trans_, axis, angle)
+  trans = SVector{3, Float64}(trans_)
+  rot = Quaternion(axis, angle)
+  Transform(trans, rot)
+end
+
 function (tf::Transform)(x)
   return tf.trans + tf.rot(x)
 end
@@ -84,4 +115,3 @@ function Base.:∘(tf12::Transform, tf23::Transform)
   rot_new = tf12.rot * tf23.rot
   Transform(trans_new, rot_new)
 end
-
