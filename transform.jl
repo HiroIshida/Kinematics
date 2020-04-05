@@ -80,7 +80,7 @@ function (q::Quaternion)(x)
 end
 
 struct Transform
-  trans::SVector{3, Float64}
+  trans::SVector{3, Float64} # TODO anable nothing, then tf composite is done by angle multiplicaiton
   rot::Quaternion
 end
 

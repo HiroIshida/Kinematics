@@ -28,7 +28,7 @@ mutable struct Revolute <: AbstractJoint
 end
 
 function tf_adj_links(jt::Revolute, angle)
-    link_parent = jt.parnet 
+    link_parent = jt.parent 
     link_child = jt.child
     tf_joint2plink = jt.origin
     tf_clink2joint = Transform([0, 0, 0], jt.axis, angle)
@@ -121,9 +121,14 @@ end
 
 function set_configuration(r::Robot, q)
     @assert length(q) == r.n_joint 
-    for (key_joint, angle) in zip(key(r.joint_dict), q)
-        r.joint_dict[key_joint].angle = q
+    for (key_joint, angle) in zip(keys(r.joint_dict), q)
+        joint = r.joint_dict[key_joint]
+        tf_plink2clink = tf_adj_links(joint, angle)
+
+        tf_key = (joint.child.name, joint.parent.name) # (from, to)
+        r.tf_dict[tf_key] = tf_plink2clink
     end
 end
 
 r = Robot("sample.urdf")
+set_configuration(r, [0.5, 0.3])
