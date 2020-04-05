@@ -16,6 +16,20 @@ mutable struct Link
     end
 end
 
+function get_parent_link(link::Link)
+    parent = link.parent # joint
+    isnothing(parent) && return nothing
+    # note that joint always has parent
+    return parent.parent
+end
+
+function get_child_link(link::Link)
+    child = link.child # joint
+    isnothing(child) && return nothing
+    # note that joint always has child
+    return child.child
+end
+
 mutable struct Revolute <: AbstractJoint
     name
     parent::Union{Nothing, Link}
@@ -27,7 +41,7 @@ mutable struct Revolute <: AbstractJoint
     end
 end
 
-function tf_adj_links(jt::Revolute, angle)
+function get_tf_adj_links(jt::Revolute, angle)
     link_parent = jt.parent 
     link_child = jt.child
     tf_joint2plink = jt.origin
@@ -123,12 +137,31 @@ function set_configuration(r::Robot, q)
     @assert length(q) == r.n_joint 
     for (key_joint, angle) in zip(keys(r.joint_dict), q)
         joint = r.joint_dict[key_joint]
-        tf_plink2clink = tf_adj_links(joint, angle)
+        tf_plink2clink = get_tf_adj_links(joint, angle)
 
         tf_key = (joint.child.name, joint.parent.name) # (from, to)
         r.tf_dict[tf_key] = tf_plink2clink
     end
 end
 
+function get_tf(r::Robot, from::Link, to::Link)
+    # * recursion
+    key_try = (from.name, to.name)
+    if ~haskey(r.tf_dict, key_try)
+        # from -> middle -> to
+        middle = get_parent_link(from)
+        tf_upper2to = get_tf(r, middle, to)
+        tf_from2upper = get_tf(r, from, middle) # this must be exist because they are adj
+        tf_from2to = tf_from2upper ∘ tf_upper2to
+        r.tf_dict[key_try] = tf_from2to
+    end
+    return r.tf_dict[key_try]
+end
+
+function get_tf(r::Robot, from::String, to::String)
+    get_tf(r, r.link_dict[from], r.link_dict[to])
+end
+
 r = Robot("sample.urdf")
 set_configuration(r, [0.5, 0.3])
+get_tf(r, "link2", "world")
