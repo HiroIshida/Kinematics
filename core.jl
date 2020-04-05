@@ -6,27 +6,34 @@ import LightXML: parse_file, child_nodes, child_elements, attribute
 abstract type AbstractJoint end
 
 mutable struct Link
-  parent::Union{Nothing, AbstractJoint}
-  child::Union{Nothing, AbstractJoint}
-  name
-  length
-  color
-  function Link(name; length=1.0, color=:red)
-    new(nothing, nothing, name, length, color)
-  end
+    parent::Union{Nothing, AbstractJoint}
+    child::Union{Nothing, AbstractJoint}
+    name
+    length
+    color
+    function Link(name; length=1.0, color=:red)
+        new(nothing, nothing, name, length, color)
+    end
 end
 
 mutable struct Revolute <: AbstractJoint
-  name
-  parent::Union{Nothing, Link}
-  child::Union{Nothing, Link}
-  origin::Transform
-  axis::SVector{3, Float64}
-  angle::Float64
-  function Revolute(name, parent, child, origin, axis, angle=0.)
-    new(name, parent, child, origin, axis, angle)
-  end
+    name
+    parent::Union{Nothing, Link}
+    child::Union{Nothing, Link}
+    origin::Transform
+    axis::SVector{3, Float64}
+    angle::Union{Nothing, Float64}
+    function Revolute(name, parent, child, origin, axis, angle=nothing)
+        new(name, parent, child, origin, axis, angle)
+    end
 end
+
+#=
+function tf_adj_links(jt::Revolute)
+    jt.parnet 
+    jt.child
+end
+=#
 
 function parse_urdf(urdffile)
     xroot = LightXML.root(parse_file(urdffile))
@@ -102,12 +109,24 @@ mutable struct Robot
     link_dict
     joint_dict 
     tf_dict
+
+    n_link
+    n_joint
 end
 
 function Robot(urdffile)
     link_dict, joint_dict = parse_urdf(urdffile)
+    n_link = length(link_dict)
+    n_joint = length(joint_dict) # TODO subtract number of fixed joints
     tf_dict = Dict()
-    Robot(link_dict, joint_dict, tf_dict) 
+    Robot(link_dict, joint_dict, tf_dict, n_link, n_joint) 
+end
+
+function set_configuration(r::Robot, q)
+    @assert length(q) == r.n_joint 
+    for (key_joint, angle) in zip(key(r.joint_dict), q)
+        r.joint_dict[key_joint].angle = q
+    end
 end
 
 r = Robot("sample.urdf")
