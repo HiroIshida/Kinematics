@@ -117,9 +117,9 @@ function parse_joint_xml(joint_xml)
 end
 
 mutable struct Robot
-    link_dict
-    joint_dict 
-    tf_dict
+    link_dict::Dict{String, Link}
+    joint_dict::Dict{String, AbstractJoint}
+    tf_dict::Dict{Tuple{String, String}, Transform}
 
     n_link
     n_joint
