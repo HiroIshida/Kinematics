@@ -135,13 +135,16 @@ end
 
 function set_configuration(r::Robot, q)
     @assert length(q) == r.n_joint 
+
+    tf_dict = Dict()
     for (key_joint, angle) in zip(keys(r.joint_dict), q)
         joint = r.joint_dict[key_joint]
         tf_plink2clink = get_tf_adj_links(joint, angle)
 
         tf_key = (joint.child.name, joint.parent.name) # (from, to)
-        r.tf_dict[tf_key] = tf_plink2clink
+        tf_dict[tf_key] = tf_plink2clink
     end
+    r.tf_dict = tf_dict
 end
 
 function get_tf(r::Robot, from::Link, to::Link)
@@ -163,5 +166,9 @@ function get_tf(r::Robot, from::String, to::String)
 end
 
 r = Robot("sample.urdf")
-set_configuration(r, [0.5, 0.3])
-get_tf(r, "link2", "world")
+@time begin 
+    for i in 1:10000
+        set_configuration(r, [0.5, 0.3])
+        get_tf(r, "link2", "world")
+    end
+end
