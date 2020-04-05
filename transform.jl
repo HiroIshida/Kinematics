@@ -58,7 +58,7 @@ function Quaternion(axis, angle)
     vec_ = [cos(half_angle), 
             axis[1]*sin(half_angle), 
             axis[2]*sin(half_angle), 
-            axis[2]*sin(half_angle)]
+            axis[3]*sin(half_angle)]
     vec = SVector{4}(vec_)
     mat = quaternion2matrix(vec)
     Quaternion(vec, mat)

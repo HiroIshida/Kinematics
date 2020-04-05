@@ -1,6 +1,12 @@
 using Test
 include("transform.jl")
 
+function test_quaternion()
+    rot1 = Quaternion([0, 0, 1], pi/2)
+    rot2 = Quaternion(0, 0, pi/2)
+    @test norm(rot1.vec - rot2.vec) < 1e-10
+end
+    
 function test_rotation()
   rot43 = Quaternion(0, 0, -pi/2)
   rot32= Quaternion(0, -pi/2, 0)
@@ -20,5 +26,6 @@ function test_transform()
   @test norm(tf41.rot.vec - rpy2quaternion(0, 0, pi/2)) < 1e-10
 end
 
+test_quaternion()
 test_rotation()
 test_transform()
